@@ -16,7 +16,7 @@ object Store {
     val dispatch: Dispatch = { action ->
         val state = rootReducer(mutableStateFlow.value, action)
         val json = Json.encodeToString(state)
-        println("${action.javaClass} -> $json")
+        println("${action.name} -> $json")
         Database.writeJsonState(json)
         mutableStateFlow.value = state
     }
@@ -29,6 +29,14 @@ data class State(
     val todoIndexOpenedForDetails: Int? = null,
 )
 
+val Action.name: String
+    get() = try {
+        @Suppress("RECEIVER_NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
+        javaClass.canonicalName.removePrefix(javaClass.`package`.name).removePrefix(".")
+    } catch (e: Exception) {
+        "UnknownActionName"
+    }
+
 interface Action
 
 class SetState(val state: State) : Action
@@ -39,7 +47,7 @@ sealed interface Todo : Action {
     object SubmitField : Todo
 }
 
-sealed interface Details : Action{
+sealed interface Details : Action {
     class Open(val index: Int) : Details
     object Close : Details
 }
@@ -48,7 +56,10 @@ fun rootReducer(state: State, action: Action): State = when (action) {
     is SetState -> action.state
     is Todo.Remove -> state.copy(todos = state.todos.filterIndexed { index, _ -> index != action.index })
     is Todo.EditFieldText -> state.copy(todoFieldText = action.text)
-    is Todo.SubmitField -> state.copy(todos = state.todos + state.todoFieldText, todoFieldText = "")
+    is Todo.SubmitField -> state.copy(
+        todos = listOf(state.todoFieldText) + state.todos,
+        todoFieldText = ""
+    )
     is Details -> state.copy(todoIndexOpenedForDetails = detailsReducer(state, action))
     else -> state
 }

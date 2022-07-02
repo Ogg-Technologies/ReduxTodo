@@ -31,20 +31,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         tryLoadSavedState()
         setContent {
-            ReduxTodoTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colors.background
-                ) {
-                    val state: State by Store.stateFlow.collectAsState()
-                    val details = state.selectDetailsTodo()
-                    if (details != null) {
-                        DetailsScreen(todo = details, Store.dispatch)
-                    } else {
-                        MainScreen(state, Store.dispatch)
-                    }
-                }
-            }
+            ReduxTodoApp()
         }
     }
 
@@ -59,100 +46,19 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun DetailsScreen(todo: String, dispatch: Dispatch = {}) {
-    BackHandler {
-        dispatch(Details.Close)
-    }
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(
+private fun ReduxTodoApp() {
+    ReduxTodoTheme {
+        Surface(
             modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+            color = MaterialTheme.colors.background
         ) {
-            Text(
-                text = todo,
-                fontSize = 32.sp,
-                textAlign = TextAlign.Center,
-            )
-        }
-    }
-}
-
-@Composable
-fun MainScreen(state: State, dispatch: Dispatch = {}) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        TodoAddingForm(
-            state.todoFieldText,
-            { text -> dispatch(Todo.EditFieldText(text)) },
-            { dispatch(Todo.SubmitField) }
-        )
-        TodoList(state.todos, dispatch)
-    }
-}
-
-@Composable
-fun TodoAddingForm(currentText: String, onValueChanged: (String) -> Unit, onSubmit: () -> Unit) {
-    TextField(
-        value = currentText,
-        onValueChange = onValueChanged,
-        keyboardOptions = KeyboardOptions(
-            imeAction = ImeAction.Done
-        ),
-        keyboardActions = KeyboardActions(
-            onDone = { onSubmit() }
-        ),
-        modifier = Modifier.fillMaxWidth()
-    )
-}
-
-@Composable
-fun TodoList(todos: List<String>, dispatch: Dispatch) {
-    LazyColumn {
-        todos.forEachIndexed { index, todo ->
-            item {
-                TodoItem(
-                    todo,
-                    onDelete = {
-                        dispatch(Todo.Remove(index))
-                    },
-                    onClick = {
-                        dispatch(Details.Open(index))
-                    }
-                )
+            val state: State by Store.stateFlow.collectAsState()
+            val details = state.selectDetailsTodo()
+            if (details != null) {
+                DetailsScreen(todo = details, Store.dispatch)
+            } else {
+                MainScreen(state, Store.dispatch)
             }
         }
     }
-}
-
-@Composable
-fun TodoItem(todo: String, onDelete: () -> Unit, onClick: () -> Unit) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-            .clickable { onClick() },
-    ) {
-        Text(text = todo, fontSize = 20.sp)
-        Spacer(modifier = Modifier.weight(1f))
-        IconButton(onClick = onDelete) {
-            Icon(Icons.Filled.Delete, contentDescription = "Delete")
-        }
-    }
-}
-
-fun createMockState() = State(todos = listOf("Chill", "Drink", "Eat"))
-
-@Preview(showBackground = true)
-@Composable
-fun DefaultPreview() {
-    MainScreen(state = createMockState())
-}
-
-@Preview(showBackground = true)
-@Composable
-fun DetailsPreview() {
-    DetailsScreen("Chill", {})
 }
