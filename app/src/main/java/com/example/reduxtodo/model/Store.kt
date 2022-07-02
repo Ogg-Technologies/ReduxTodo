@@ -15,14 +15,11 @@ object Store {
 
     val dispatch: Dispatch = { action ->
         val state = rootReducer(mutableStateFlow.value, action)
-        Json.encodeToString(state).also {
-            println("state: $it")
-        }
+        val json = Json.encodeToString(state)
+        Database.writeJsonState(json)
         mutableStateFlow.value = state
     }
 }
-
-fun createMockState() = State(todos = listOf("Chill", "Drink", "Eat"))
 
 @Serializable
 data class State(
@@ -30,16 +27,14 @@ data class State(
     val todoFieldText: String = ""
 )
 
-@Serializable
-data class Test(val a: String)
-
 interface Action
-
+class SetState(val state: State) : Action
 class RemoveTodo(val index: Int) : Action
 class EditTodoFieldText(val text: String) : Action
 class SubmitTodoField : Action
 
 fun rootReducer(state: State, action: Action): State = when (action) {
+    is SetState -> action.state
     is RemoveTodo -> state.copy(todos = state.todos.filterIndexed { index, _ -> index != action.index })
     is EditTodoFieldText -> state.copy(todoFieldText = action.text)
     is SubmitTodoField -> state.copy(todos = state.todos + state.todoFieldText, todoFieldText = "")

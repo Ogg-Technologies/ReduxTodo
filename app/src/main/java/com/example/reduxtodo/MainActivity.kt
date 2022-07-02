@@ -21,13 +21,24 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.reduxtodo.model.*
 import com.example.reduxtodo.ui.theme.ReduxTodoTheme
+import kotlinx.serialization.json.Json
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        tryLoadSavedState()
         setContent {
             val state: State by Store.stateFlow.collectAsState()
             Screen(state, Store.dispatch)
+        }
+    }
+
+    private fun tryLoadSavedState() {
+        val savedJsonState = Database.readJsonState() ?: return
+        try {
+            val state = Json.decodeFromString(State.serializer(), savedJsonState)
+            Store.dispatch(SetState(state))
+        } catch (e: Exception) {
         }
     }
 }
@@ -93,6 +104,8 @@ fun TodoItem(todo: String, onDelete: () -> Unit) {
         }
     }
 }
+
+fun createMockState() = State(todos = listOf("Chill", "Drink", "Eat"))
 
 @Preview(showBackground = true)
 @Composable
