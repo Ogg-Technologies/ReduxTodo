@@ -16,6 +16,7 @@ object Store {
     val dispatch: Dispatch = { action ->
         val state = rootReducer(mutableStateFlow.value, action)
         val json = Json.encodeToString(state)
+        println("${action.javaClass} -> $json")
         Database.writeJsonState(json)
         mutableStateFlow.value = state
     }
@@ -24,19 +25,37 @@ object Store {
 @Serializable
 data class State(
     val todos: List<String> = emptyList(),
-    val todoFieldText: String = ""
+    val todoFieldText: String = "",
+    val todoIndexOpenedForDetails: Int? = null,
 )
 
 interface Action
+
 class SetState(val state: State) : Action
-class RemoveTodo(val index: Int) : Action
-class EditTodoFieldText(val text: String) : Action
-class SubmitTodoField : Action
+
+sealed interface Todo : Action {
+    class Remove(val index: Int) : Todo
+    class EditFieldText(val text: String) : Todo
+    object SubmitField : Todo
+}
+
+sealed interface Details : Action{
+    class Open(val index: Int) : Details
+    object Close : Details
+}
 
 fun rootReducer(state: State, action: Action): State = when (action) {
     is SetState -> action.state
-    is RemoveTodo -> state.copy(todos = state.todos.filterIndexed { index, _ -> index != action.index })
-    is EditTodoFieldText -> state.copy(todoFieldText = action.text)
-    is SubmitTodoField -> state.copy(todos = state.todos + state.todoFieldText, todoFieldText = "")
+    is Todo.Remove -> state.copy(todos = state.todos.filterIndexed { index, _ -> index != action.index })
+    is Todo.EditFieldText -> state.copy(todoFieldText = action.text)
+    is Todo.SubmitField -> state.copy(todos = state.todos + state.todoFieldText, todoFieldText = "")
+    is Details -> state.copy(todoIndexOpenedForDetails = detailsReducer(state, action))
     else -> state
 }
+
+fun detailsReducer(state: State, action: Details): Int? = when (action) {
+    is Details.Open -> action.index
+    is Details.Close -> null
+}
+
+fun State.selectDetailsTodo(): String? = todoIndexOpenedForDetails?.let { todos.getOrNull(it) }

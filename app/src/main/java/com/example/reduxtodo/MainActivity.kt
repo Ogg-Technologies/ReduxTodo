@@ -2,7 +2,9 @@ package com.example.reduxtodo
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardActions
@@ -16,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -28,8 +31,20 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         tryLoadSavedState()
         setContent {
-            val state: State by Store.stateFlow.collectAsState()
-            Screen(state, Store.dispatch)
+            ReduxTodoTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colors.background
+                ) {
+                    val state: State by Store.stateFlow.collectAsState()
+                    val details = state.selectDetailsTodo()
+                    if (details != null) {
+                        DetailsScreen(todo = details, Store.dispatch)
+                    } else {
+                        MainScreen(state, Store.dispatch)
+                    }
+                }
+            }
         }
     }
 
@@ -44,20 +59,36 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Screen(state: State, dispatch: Dispatch = {}) {
-    ReduxTodoTheme {
-        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                TodoAddingForm(
-                    state.todoFieldText,
-                    { text -> dispatch(EditTodoFieldText(text)) },
-                    { dispatch(SubmitTodoField()) }
-                )
-                TodoList(state.todos, dispatch)
-            }
+fun DetailsScreen(todo: String, dispatch: Dispatch = {}) {
+    BackHandler {
+        dispatch(Details.Close)
+    }
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = todo,
+                fontSize = 32.sp,
+                textAlign = TextAlign.Center,
+            )
         }
+    }
+}
+
+@Composable
+fun MainScreen(state: State, dispatch: Dispatch = {}) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        TodoAddingForm(
+            state.todoFieldText,
+            { text -> dispatch(Todo.EditFieldText(text)) },
+            { dispatch(Todo.SubmitField) }
+        )
+        TodoList(state.todos, dispatch)
     }
 }
 
@@ -81,21 +112,28 @@ fun TodoList(todos: List<String>, dispatch: Dispatch) {
     LazyColumn {
         todos.forEachIndexed { index, todo ->
             item {
-                TodoItem(todo, onDelete = {
-                    dispatch(RemoveTodo(index))
-                })
+                TodoItem(
+                    todo,
+                    onDelete = {
+                        dispatch(Todo.Remove(index))
+                    },
+                    onClick = {
+                        dispatch(Details.Open(index))
+                    }
+                )
             }
         }
     }
 }
 
 @Composable
-fun TodoItem(todo: String, onDelete: () -> Unit) {
+fun TodoItem(todo: String, onDelete: () -> Unit, onClick: () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(16.dp)
+            .clickable { onClick() },
     ) {
         Text(text = todo, fontSize = 20.sp)
         Spacer(modifier = Modifier.weight(1f))
@@ -110,5 +148,11 @@ fun createMockState() = State(todos = listOf("Chill", "Drink", "Eat"))
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
-    Screen(state = createMockState())
+    MainScreen(state = createMockState())
+}
+
+@Preview(showBackground = true)
+@Composable
+fun DetailsPreview() {
+    DetailsScreen("Chill", {})
 }
