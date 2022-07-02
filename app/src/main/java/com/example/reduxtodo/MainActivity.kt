@@ -5,10 +5,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -16,7 +17,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.reduxtodo.model.*
@@ -27,13 +27,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             val state: State by Store.stateFlow.collectAsState()
-            Screen(state)
+            Screen(state, Store.dispatch)
         }
     }
 }
 
 @Composable
-fun Screen(state: State) {
+fun Screen(state: State, dispatch: Dispatch = {}) {
     ReduxTodoTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colors.background) {
             Column(
@@ -41,10 +41,10 @@ fun Screen(state: State) {
             ) {
                 TodoAddingForm(
                     state.todoFieldText,
-                    { text -> Store.dispatch(EditTodoFieldText(text)) },
-                    { Store.dispatch(SubmitTodoField()) }
+                    { text -> dispatch(EditTodoFieldText(text)) },
+                    { dispatch(SubmitTodoField()) }
                 )
-                TodoList(state.todos)
+                TodoList(state.todos, dispatch)
             }
         }
     }
@@ -66,17 +66,32 @@ fun TodoAddingForm(currentText: String, onValueChanged: (String) -> Unit, onSubm
 }
 
 @Composable
-fun TodoList(todos: List<String>) {
+fun TodoList(todos: List<String>, dispatch: Dispatch) {
     LazyColumn {
-        todos.forEach { todo ->
-            item { TodoItem(todo) }
+        todos.forEachIndexed { index, todo ->
+            item {
+                TodoItem(todo, onDelete = {
+                    dispatch(RemoveTodo(index))
+                })
+            }
         }
     }
 }
 
 @Composable
-fun TodoItem(todo: String) {
-    Text(text = todo)
+fun TodoItem(todo: String, onDelete: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+    ) {
+        Text(text = todo, fontSize = 20.sp)
+        Spacer(modifier = Modifier.weight(1f))
+        IconButton(onClick = onDelete) {
+            Icon(Icons.Filled.Delete, contentDescription = "Delete")
+        }
+    }
 }
 
 @Preview(showBackground = true)
