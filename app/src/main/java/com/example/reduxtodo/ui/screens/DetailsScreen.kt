@@ -15,7 +15,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.reduxtodo.createMockTodos
+import com.example.reduxtodo.createMockState
 import com.example.reduxtodo.model.*
 import com.example.reduxtodo.ui.theme.ReduxTodoTheme
 
@@ -104,11 +104,6 @@ private fun Arrow(state: State, dispatch: Dispatch, direction: ArrowDirection) {
 @Composable
 fun DetailsPreview() {
     ReduxTodoTheme {
-        DetailsScreen(
-            State(
-                todos = createMockTodos(),
-                todoIndexOpenedForDetails = 0
-            )
-        )
+        DetailsScreen(createMockState(detailsOpened = true))
     }
 }

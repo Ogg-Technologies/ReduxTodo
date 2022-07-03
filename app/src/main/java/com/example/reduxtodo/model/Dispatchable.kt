@@ -16,13 +16,16 @@ interface Action : Dispatchable
 
 class SetState(val state: State) : Action
 
-sealed interface TodoAction : Action {
-    class Remove(val index: Int) : TodoAction
-    class EditFieldText(val text: String) : TodoAction
-    object SubmitField : TodoAction
-    object RemoveCompleted : TodoAction
+class EditFieldText(val text: String) : TodoAction
+object SubmitField : TodoAction
 
+sealed interface TodoAction : Action {
+    class Add(val text: String) : TodoAction
+    class Remove(val index: Int) : TodoAction
+    object RemoveAllCompleted : TodoAction
     class Toggle(val index: Int) : TodoAction
+    object Undo : TodoAction
+    object Redo : TodoAction
 }
 
 sealed interface DetailsAction : Action {

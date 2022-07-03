@@ -56,7 +56,7 @@ object Store {
 
 @Serializable
 data class State(
-    val todos: List<Todo> = emptyList(),
+    val undoableTodos: UndoableTodos = Undoable(emptyList()),
     val todoFieldText: String = "",
     val todoIndexOpenedForDetails: Int? = null,
 )
@@ -66,29 +66,39 @@ data class Todo(val text: String = "", val isDone: Boolean = false)
 
 fun rootReducer(state: State, action: Action): State = when (action) {
     is SetState -> action.state
-    is TodoAction.EditFieldText -> state.copy(todoFieldText = action.text)
-    is TodoAction.SubmitField -> state.copy(
-        todos = todosReducer(state, action),
+    is EditFieldText -> state.copy(todoFieldText = action.text)
+    is SubmitField -> state.copy(
+        undoableTodos = undoableTodosReducer(
+            state.undoableTodos,
+            TodoAction.Add(state.todoFieldText)
+        ),
         todoFieldText = ""
     )
-    is TodoAction -> state.copy(todos = todosReducer(state, action))
+    is TodoAction -> state.copy(undoableTodos = undoableTodosReducer(state.undoableTodos, action))
     is DetailsAction -> state.copy(todoIndexOpenedForDetails = detailsReducer(action))
     else -> state
 }
 
-fun todosReducer(state: State, action: TodoAction): List<Todo> = when (action) {
-    is TodoAction.Remove -> state.todos.filterIndexed { index, _ -> index != action.index }
-    is TodoAction.Toggle -> state.todos.mapIndexed { index, todo ->
-        if (index == action.index) todo.copy(isDone = !todo.isDone) else todo
+typealias UndoableTodos = Undoable<List<Todo>>
+
+fun undoableTodosReducer(undoableTodos: UndoableTodos, action: TodoAction): UndoableTodos =
+    when (action) {
+        is TodoAction.Remove -> undoableTodos.edit { it.remove(action.index) }
+        is TodoAction.Toggle -> undoableTodos.edit { todos ->
+            todos.edit(action.index) { it.copy(isDone = !it.isDone) }
+        }
+        is TodoAction.RemoveAllCompleted -> undoableTodos.edit { it.filter { !it.isDone } }
+        is TodoAction.Add -> undoableTodos.edit { listOf(Todo(action.text)) + it }
+        is TodoAction.Undo -> undoableTodos.undo()
+        is TodoAction.Redo -> undoableTodos.redo()
+        else -> undoableTodos
     }
-    is TodoAction.SubmitField -> listOf(Todo(state.todoFieldText)) + state.todos
-    is TodoAction.RemoveCompleted -> state.todos.filter { !it.isDone }
-    else -> state.todos
-}
 
 fun detailsReducer(action: DetailsAction): Int? = when (action) {
     is DetailsAction.Open -> action.index
     is DetailsAction.Close -> null
 }
+
+val State.todos: List<Todo> get() = undoableTodos.present
 
 fun State.selectDetailsTodo(): Todo? = todoIndexOpenedForDetails?.let { todos.getOrNull(it) }

@@ -17,7 +17,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.reduxtodo.createMockTodos
+import com.example.reduxtodo.createMockState
 import com.example.reduxtodo.model.*
 import com.example.reduxtodo.model.State
 import com.example.reduxtodo.ui.theme.ReduxTodoTheme
@@ -25,20 +25,47 @@ import com.example.reduxtodo.ui.theme.ReduxTodoTheme
 @Composable
 fun MainScreen(state: State, dispatch: Dispatch = {}) {
     Scaffold(
-        topBar = { TodoAppBar(onRemoveCompleted = { dispatch(TodoAction.RemoveCompleted) }) },
+        topBar = { TodoAppBar(onRemoveCompleted = { dispatch(TodoAction.RemoveAllCompleted) }) },
         content = {
             Column(
                 modifier = Modifier.fillMaxSize(),
             ) {
                 TodoAddingForm(
                     state.todoFieldText,
-                    { text -> dispatch(TodoAction.EditFieldText(text)) },
-                    { dispatch(TodoAction.SubmitField) }
+                    { text -> dispatch(EditFieldText(text)) },
+                    { dispatch(SubmitField) }
                 )
                 TodoList(state.todos, dispatch)
             }
-        }
+        },
+        bottomBar = { TodoBottomBar(dispatch) }
     )
+}
+
+@Composable
+private fun TodoBottomBar(dispatch: Dispatch) {
+    Surface(color = MaterialTheme.colors.surface, elevation = 1.dp) {
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+        ) {
+            HistoryButton("Undo") { dispatch(TodoAction.Undo) }
+            HistoryButton("Redo") { dispatch(TodoAction.Redo) }
+        }
+    }
+}
+
+@Composable
+private fun HistoryButton(text: String, onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        contentPadding = PaddingValues(12.dp),
+        modifier = Modifier.padding(8.dp),
+    ) {
+        Text(text = text, fontSize = 20.sp)
+    }
 }
 
 @Composable
@@ -134,6 +161,6 @@ fun TodoItem(
 @Composable
 fun MainPreview() {
     ReduxTodoTheme {
-        MainScreen(State(createMockTodos()))
+        MainScreen(createMockState())
     }
 }
