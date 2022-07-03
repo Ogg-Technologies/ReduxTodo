@@ -7,66 +7,68 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-typealias Dispatch = (Action) -> Unit
+typealias Dispatch = (Dispatchable) -> Unit
 
 object Store {
     private val mutableStateFlow: MutableStateFlow<State> = MutableStateFlow(State())
     val stateFlow: StateFlow<State> get() = mutableStateFlow.asStateFlow()
 
-    val dispatch: Dispatch = { action ->
+    val dispatch: Dispatch = { dispatchable ->
+        when(dispatchable) {
+            is Action -> dispatchAction(dispatchable)
+            is Thunk -> dispatchThunk(dispatchable)
+        }
+
+    }
+
+    private fun dispatchAction(action: Action) {
         val state = rootReducer(mutableStateFlow.value, action)
         val json = Json.encodeToString(state)
-        println("${action.name} -> $json")
+        println("New action: ${action.name} -> $json")
         Database.writeJsonState(json)
         mutableStateFlow.value = state
+    }
+
+    private fun dispatchThunk(thunk: Thunk) {
+        println("New Thunk: ${thunk.name}")
+        thunk.execute(stateFlow.value, dispatch)
     }
 }
 
 @Serializable
 data class State(
-    val todos: List<String> = emptyList(),
+    val todos: List<Todo> = emptyList(),
     val todoFieldText: String = "",
     val todoIndexOpenedForDetails: Int? = null,
 )
 
-val Action.name: String
-    get() = try {
-        @Suppress("RECEIVER_NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
-        javaClass.canonicalName.removePrefix(javaClass.`package`.name).removePrefix(".")
-    } catch (e: Exception) {
-        "UnknownActionName"
-    }
-
-interface Action
-
-class SetState(val state: State) : Action
-
-sealed interface Todo : Action {
-    class Remove(val index: Int) : Todo
-    class EditFieldText(val text: String) : Todo
-    object SubmitField : Todo
-}
-
-sealed interface Details : Action {
-    class Open(val index: Int) : Details
-    object Close : Details
-}
+@Serializable
+data class Todo(val text: String = "", val isDone: Boolean = false)
 
 fun rootReducer(state: State, action: Action): State = when (action) {
     is SetState -> action.state
-    is Todo.Remove -> state.copy(todos = state.todos.filterIndexed { index, _ -> index != action.index })
-    is Todo.EditFieldText -> state.copy(todoFieldText = action.text)
-    is Todo.SubmitField -> state.copy(
-        todos = listOf(state.todoFieldText) + state.todos,
+    is TodoAction.EditFieldText -> state.copy(todoFieldText = action.text)
+    is TodoAction.SubmitField -> state.copy(
+        todos = todosReducer(state, action),
         todoFieldText = ""
     )
-    is Details -> state.copy(todoIndexOpenedForDetails = detailsReducer(state, action))
+    is TodoAction -> state.copy(todos = todosReducer(state, action))
+    is DetailsAction -> state.copy(todoIndexOpenedForDetails = detailsReducer(action))
     else -> state
 }
 
-fun detailsReducer(state: State, action: Details): Int? = when (action) {
-    is Details.Open -> action.index
-    is Details.Close -> null
+fun todosReducer(state: State, action: TodoAction): List<Todo> = when (action) {
+    is TodoAction.Remove -> state.todos.filterIndexed { index, _ -> index != action.index }
+    is TodoAction.Toggle -> state.todos.mapIndexed { index, todo ->
+        if (index == action.index) todo.copy(isDone = !todo.isDone) else todo
+    }
+    is TodoAction.SubmitField -> listOf(Todo(state.todoFieldText)) + state.todos
+    else -> state.todos
 }
 
-fun State.selectDetailsTodo(): String? = todoIndexOpenedForDetails?.let { todos.getOrNull(it) }
+fun detailsReducer(action: DetailsAction): Int? = when (action) {
+    is DetailsAction.Open -> action.index
+    is DetailsAction.Close -> null
+}
+
+fun State.selectDetailsTodo(): Todo? = todoIndexOpenedForDetails?.let { todos.getOrNull(it) }

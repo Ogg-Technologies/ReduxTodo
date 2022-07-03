@@ -1,14 +1,12 @@
-package com.example.reduxtodo
+package com.example.reduxtodo.ui.screens
 
+import android.content.res.Configuration
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.Text
-import androidx.compose.material.TextField
+import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.Composable
@@ -18,23 +16,31 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.reduxtodo.model.Details
-import com.example.reduxtodo.model.Dispatch
-import com.example.reduxtodo.model.State
-import com.example.reduxtodo.model.Todo
+import com.example.reduxtodo.model.*
+import com.example.reduxtodo.ui.theme.ReduxTodoTheme
 
 @Composable
 fun MainScreen(state: State, dispatch: Dispatch = {}) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        TodoAddingForm(
-            state.todoFieldText,
-            { text -> dispatch(Todo.EditFieldText(text)) },
-            { dispatch(Todo.SubmitField) }
-        )
-        TodoList(state.todos, dispatch)
-    }
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("ReduxTodo") },
+                backgroundColor = MaterialTheme.colors.primary
+            )
+        },
+        content = {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                TodoAddingForm(
+                    state.todoFieldText,
+                    { text -> dispatch(TodoAction.EditFieldText(text)) },
+                    { dispatch(TodoAction.SubmitField) }
+                )
+                TodoList(state.todos, dispatch)
+            }
+        }
+    )
 }
 
 @Composable
@@ -48,22 +54,26 @@ fun TodoAddingForm(currentText: String, onValueChanged: (String) -> Unit, onSubm
         keyboardActions = KeyboardActions(
             onDone = { onSubmit() }
         ),
+        placeholder = { Text("Add a todo...") },
         modifier = Modifier.fillMaxWidth()
     )
 }
 
 @Composable
-fun TodoList(todos: List<String>, dispatch: Dispatch) {
+fun TodoList(todos: List<Todo>, dispatch: Dispatch) {
     LazyColumn {
         todos.forEachIndexed { index, todo ->
             item {
                 TodoItem(
                     todo,
                     onDelete = {
-                        dispatch(Todo.Remove(index))
+                        dispatch(TodoAction.Remove(index))
                     },
-                    onClick = {
-                        dispatch(Details.Open(index))
+                    onOpened = {
+                        dispatch(DetailsAction.Open(index))
+                    },
+                    onCheckedChanged = {
+                        dispatch(TodoAction.Toggle(index))
                     }
                 )
             }
@@ -72,15 +82,16 @@ fun TodoList(todos: List<String>, dispatch: Dispatch) {
 }
 
 @Composable
-fun TodoItem(todo: String, onDelete: () -> Unit, onClick: () -> Unit) {
+fun TodoItem(todo: Todo, onDelete: () -> Unit, onOpened: () -> Unit, onCheckedChanged: (Boolean) -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
-            .clickable { onClick() },
+            .clickable { onOpened() },
     ) {
-        Text(text = todo, fontSize = 20.sp)
+        Checkbox(checked = todo.isDone, onCheckedChange = onCheckedChanged)
+        Text(text = todo.text, fontSize = 20.sp)
         Spacer(modifier = Modifier.weight(1f))
         IconButton(onClick = onDelete) {
             Icon(Icons.Filled.Delete, contentDescription = "Delete")
@@ -88,10 +99,12 @@ fun TodoItem(todo: String, onDelete: () -> Unit, onClick: () -> Unit) {
     }
 }
 
-fun createMockState() = State(todos = listOf("Chill", "Drink", "Eat"))
+fun createMockState() = State(todos = listOf("Chill", "Drink", "Eat").map { Todo(it) })
 
-@Preview(showBackground = true)
+@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
 @Composable
-fun DefaultPreview() {
-    MainScreen(state = createMockState())
+fun MainPreview() {
+    ReduxTodoTheme {
+        MainScreen(state = createMockState())
+    }
 }
