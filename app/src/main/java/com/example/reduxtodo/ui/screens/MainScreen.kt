@@ -9,25 +9,23 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.reduxtodo.createMockTodos
 import com.example.reduxtodo.model.*
+import com.example.reduxtodo.model.State
 import com.example.reduxtodo.ui.theme.ReduxTodoTheme
 
 @Composable
 fun MainScreen(state: State, dispatch: Dispatch = {}) {
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("ReduxTodo") },
-                backgroundColor = MaterialTheme.colors.primary
-            )
-        },
+        topBar = { TodoAppBar(onRemoveCompleted = { dispatch(TodoAction.RemoveCompleted) }) },
         content = {
             Column(
                 modifier = Modifier.fillMaxSize(),
@@ -38,6 +36,33 @@ fun MainScreen(state: State, dispatch: Dispatch = {}) {
                     { dispatch(TodoAction.SubmitField) }
                 )
                 TodoList(state.todos, dispatch)
+            }
+        }
+    )
+}
+
+@Composable
+private fun TodoAppBar(onRemoveCompleted: () -> Unit) {
+    TopAppBar(
+        title = { Text("ReduxTodo") },
+        backgroundColor = MaterialTheme.colors.primary,
+        actions = {
+            var showMenu by remember { mutableStateOf(false) }
+            IconButton(onClick = { showMenu = !showMenu }) {
+                Icon(Icons.Default.MoreVert, contentDescription = "More")
+            }
+            DropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false }
+            ) {
+                DropdownMenuItem(onClick = {
+                    onRemoveCompleted()
+                    showMenu = false
+                }) {
+                    Icon(Icons.Filled.Delete, contentDescription = "Delete")
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(text = "Remove completed")
+                }
             }
         }
     )
@@ -104,12 +129,11 @@ fun TodoItem(
     }
 }
 
-fun createMockState() = State(todos = listOf("Chill", "Drink", "Eat").map { Todo(it) })
 
 @Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
 @Composable
 fun MainPreview() {
     ReduxTodoTheme {
-        MainScreen(state = createMockState())
+        MainScreen(State(createMockTodos()))
     }
 }

@@ -44,7 +44,7 @@ private fun ReduxTodoApp() {
             val state: State by Store.stateFlow.collectAsState()
             val details = state.selectDetailsTodo()
             if (details != null) {
-                DetailsScreen(todo = details, Store.dispatch)
+                DetailsScreen(state, Store.dispatch)
             } else {
                 MainScreen(state, Store.dispatch)
             }

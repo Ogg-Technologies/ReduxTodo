@@ -20,6 +20,8 @@ sealed interface TodoAction : Action {
     class Remove(val index: Int) : TodoAction
     class EditFieldText(val text: String) : TodoAction
     object SubmitField : TodoAction
+    object RemoveCompleted : TodoAction
+
     class Toggle(val index: Int) : TodoAction
 }
 

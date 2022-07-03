@@ -82,6 +82,7 @@ fun todosReducer(state: State, action: TodoAction): List<Todo> = when (action) {
         if (index == action.index) todo.copy(isDone = !todo.isDone) else todo
     }
     is TodoAction.SubmitField -> listOf(Todo(state.todoFieldText)) + state.todos
+    is TodoAction.RemoveCompleted -> state.todos.filter { !it.isDone }
     else -> state.todos
 }
 
