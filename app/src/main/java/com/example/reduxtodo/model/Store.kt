@@ -1,22 +1,28 @@
 package com.example.reduxtodo.model
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-typealias Dispatch = (Dispatchable) -> Unit
+typealias Dispatch = (dispatchable: Dispatchable) -> Unit
+typealias AsyncDispatch = suspend (dispatchable: Dispatchable) -> Unit
 
 object Store {
     private val mutableStateFlow: MutableStateFlow<State> = MutableStateFlow(State())
     val stateFlow: StateFlow<State> get() = mutableStateFlow.asStateFlow()
 
     val dispatch: Dispatch = { dispatchable ->
-        when(dispatchable) {
+        when (dispatchable) {
             is Action -> dispatchAction(dispatchable)
             is Thunk -> dispatchThunk(dispatchable)
+            is AsyncThunk -> dispatchAsyncThunk(dispatchable)
         }
 
     }
@@ -32,6 +38,19 @@ object Store {
     private fun dispatchThunk(thunk: Thunk) {
         println("New Thunk: ${thunk.name}")
         thunk.execute(stateFlow.value, dispatch)
+    }
+
+    private fun dispatchAsyncThunk(thunk: AsyncThunk) {
+        println("New AsyncThunk: ${thunk.name}")
+        GlobalScope.launch(Dispatchers.Main) {
+            thunk.execute(
+                stateFlow.value
+            ) { dispatchable ->
+                withContext(Dispatchers.IO) {
+                    dispatch(dispatchable)
+                }
+            }
+        }
     }
 }
 

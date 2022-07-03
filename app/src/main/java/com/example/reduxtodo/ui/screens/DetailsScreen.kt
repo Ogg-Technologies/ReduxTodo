@@ -15,16 +15,13 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
-import com.example.reduxtodo.model.DetailsAction
-import com.example.reduxtodo.model.Dispatch
-import com.example.reduxtodo.model.Todo
-import com.example.reduxtodo.model.doToggleDetailedTodo
+import com.example.reduxtodo.model.*
 import com.example.reduxtodo.ui.theme.ReduxTodoTheme
 
 @Composable
 fun DetailsScreen(todo: Todo, dispatch: Dispatch = {}) {
     fun close() {
-        dispatch(DetailsAction.Close)
+        dispatch(doScreenChangeDispatch(DetailsAction.Close))
     }
     BackHandler { close() }
     Scaffold(

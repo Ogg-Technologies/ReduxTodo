@@ -70,7 +70,7 @@ fun TodoList(todos: List<Todo>, dispatch: Dispatch) {
                         dispatch(TodoAction.Remove(index))
                     },
                     onOpened = {
-                        dispatch(DetailsAction.Open(index))
+                        dispatch(doScreenChangeDispatch(DetailsAction.Open(index)))
                     },
                     onCheckedChanged = {
                         dispatch(TodoAction.Toggle(index))
@@ -82,13 +82,18 @@ fun TodoList(todos: List<Todo>, dispatch: Dispatch) {
 }
 
 @Composable
-fun TodoItem(todo: Todo, onDelete: () -> Unit, onOpened: () -> Unit, onCheckedChanged: (Boolean) -> Unit) {
+fun TodoItem(
+    todo: Todo,
+    onDelete: () -> Unit,
+    onOpened: () -> Unit,
+    onCheckedChanged: (Boolean) -> Unit
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
-            .clickable { onOpened() },
+            .clickable { onOpened() }
+            .padding(16.dp),
     ) {
         Checkbox(checked = todo.isDone, onCheckedChange = onCheckedChanged)
         Text(text = todo.text, fontSize = 20.sp)
